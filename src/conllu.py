@@ -1,7 +1,6 @@
-"""Minimal CoNLL-U reader (stdlib only). Yields sentences as lists of dicts.
-
-Skips multiword-token ranges (1-2) and empty nodes (1.1); we want the
-syntactic-word rows, which carry lemma/feats in IDT.
+"""Bare-bones CoNLL-U reader, stdlib only. Yields sentences as lists of
+dicts. Multiword-token ranges (1-2) and empty nodes (1.1) get skipped —
+the syntactic-word rows are the ones carrying lemma/feats in IDT.
 """
 
 FIELDS = ("id", "form", "lemma", "upos", "xpos", "feats", "head", "deprel",

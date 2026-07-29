@@ -1,30 +1,29 @@
-"""Irish initial mutations: séimhiú (Len), urú (Ecl), h-prefix, t-prefix.
+"""Irish initial mutations: séimhiú, urú, h-prefix, t-prefix.
 
-Single source of truth is the rule tables below. Three consumers:
-  1. direct string functions  (lenite / eclipse / h_prefix / t_prefix, demutate)
-  2. a reference FST engine   (build_fst; parity-tested against the functions)
-  3. foma_grammar()           (replace-rule emission: the Scalpel porting contract)
+Everything here is driven off the small rule tables near the top. The same
+tables feed the plain string functions (lenite, eclipse, etc.), a little
+reference FST that pins down the semantics we want from the C++ port, and
+foma_grammar(), which spells the rules out in foma replace-rule notation.
 
-Design commitments (see ARCHITECTURE.md):
-  - pure application layer: no triggers, no lexicon, no heuristics
-  - vacuous application: mutating a non-target returns the word unchanged
-  - demutation over-generates candidates; disambiguation is a later layer
-  - feature names follow UD-IDT (Len/Ecl/HPref) + our TPref extension
+This layer only *applies* mutations. It knows nothing about triggers or
+the lexicon: mutating a word the rule doesn't touch just hands it back
+unchanged, and demutate() happily over-generates candidates — picking the
+right one is a later layer's problem (see ARCHITECTURE.md). Tag names
+follow UD-IDT (Len/Ecl/HPref); TPref is ours, since IDT leaves the
+t-prefix unmarked.
 
-Rules implemented from the standard grammar (Caighdeán Oifigiúil; cf.
-Beesley & Karttunen ch. 3 for the replace-rule shape). Every rule is tested
-against attested forms mined from UD Irish-IDT (scripts/gen_tests.py) plus
-hand-picked citation forms (tests/test_mutations.py).
+The rules themselves are standard Caighdeán; the replace-rule shape comes
+from Beesley & Karttunen ch. 3. Tested against attested forms mined from
+UD Irish-IDT (scripts/gen_tests.py) plus hand-picked citation forms.
 """
 
-VOWELS = "aeiouáéíóú"          # lowercase; use .lower() for membership tests
-S_FOLLOWERS = VOWELS + "lnr"   # s mutates only before these (blocks sc/sm/sp/st)
+VOWELS = "aeiouáéíóú"          # lowercase — .lower() before membership tests
+S_FOLLOWERS = VOWELS + "lnr"   # s only mutates before these (so sc/sm/sp/st are safe)
 
-# ---- rule tables -----------------------------------------------------------
+LENITABLE = set("bcdfgmpt")    # s too, but only before S_FOLLOWERS
 
-LENITABLE = set("bcdfgmpt")    # + s, conditionally (S_FOLLOWERS)
-
-ECLIPSIS_PREFIX = {            # base letter is KEPT; prefix is always lowercase
+# base letter is kept; the prefix itself is always lowercase
+ECLIPSIS_PREFIX = {
     "b": "m", "c": "g", "d": "n", "f": "bh", "g": "n", "p": "b", "t": "d",
 }
 
@@ -35,10 +34,10 @@ def _is_vowel(ch: str) -> bool:
     return ch.lower() in VOWELS
 
 
-# ---- generation (surface <- base) -----------------------------------------
+# generation
 
 def lenite(w: str) -> str:
-    """séimhiú: insert h after a lenitable initial consonant."""
+    """séimhiú — stick an h after a lenitable initial consonant."""
     if not w:
         return w
     c0, l0 = w[0], w[0].lower()
@@ -50,7 +49,8 @@ def lenite(w: str) -> str:
 
 
 def eclipse(w: str) -> str:
-    """urú: voiced/nasal prefix; n- before vowels (no hyphen before capitals)."""
+    """urú — voiced/nasal prefix, or n- before a vowel (no hyphen if it's
+    a capital: nÉire, not n-Éire)."""
     if not w:
         return w
     c0, l0 = w[0], w[0].lower()
@@ -62,14 +62,14 @@ def eclipse(w: str) -> str:
 
 
 def h_prefix(w: str) -> str:
-    """h before a vowel-initial word; never hyphenated (na hÉireann)."""
+    """h before a vowel-initial word. Never hyphenated: na hÉireann."""
     if w and _is_vowel(w[0]):
         return "h" + w
     return w
 
 
 def t_prefix(w: str) -> str:
-    """t before vowel-initial (t-ainm / tAthair) and before mutable s (tsúil)."""
+    """t before a vowel (t-ainm, tAthair) and before mutable s (tsúil)."""
     if not w:
         return w
     c0, l0 = w[0], w[0].lower()
@@ -81,8 +81,8 @@ def t_prefix(w: str) -> str:
 
 
 def _caps_aware(fn):
-    """ALL-CAPS orthography: inserted material is uppercased too
-    (BLIAIN -> BHLIAIN, FUIL -> BHFUIL). Single letters exempt."""
+    """In ALL-CAPS text the inserted material gets uppercased too:
+    BLIAIN -> BHLIAIN, FUIL -> BHFUIL. Single letters are left alone."""
     def wrapped(w: str) -> str:
         if len(w) > 1 and w.isupper():
             return fn(w).upper()
@@ -96,18 +96,18 @@ MUTATE = {"Len": _caps_aware(lenite), "Ecl": _caps_aware(eclipse),
 
 
 def applies(tag: str, w: str) -> bool:
-    """True if the mutation is non-vacuous on w."""
+    """True if the mutation actually does something to w."""
     return MUTATE[tag](w) != w
 
 
-# ---- analysis (surface -> candidate bases) --------------------------------
+# analysis: surface -> candidate bases
 
 def inverse_ok(tag: str, base: str, surface: str) -> bool:
-    """Does mutating base yield surface, modulo accepted orthographic
-    variants? Canonical output is Caighdeán (no hyphen before capitals,
-    no hyphenated h-prefix); analysis additionally accepts:
-      - hyphen-before-capital:  n-Ealaíon ~ nEalaíon, t-Athair ~ tAthair
-      - hyphenated h-prefix (pre-standard): h-aoise ~ haoise, h-Íde ~ hÍde
+    """Does mutating base give surface, allowing the orthographic variants
+    we accept on the analysis side? Generation is strict Caighdeán (no
+    hyphen before capitals, no hyphenated h), but real text also has
+    n-Ealaíon for nEalaíon, and pre-standard h-aoise / h-Íde, so analysis
+    takes those too.
     """
     m = MUTATE[tag](base)
     if m == surface:
@@ -115,10 +115,10 @@ def inverse_ok(tag: str, base: str, surface: str) -> bool:
     if surface[1:2] == "-" and surface[0] in "nht" \
             and m == surface[0] + surface[2:]:
         return True
-    # Case-flexible mutation material: ALL-CAPS text occurs both fully
-    # uppercased (IDT: BHFUIL, MBRIATHAR) and with lowercase prefixes in the
-    # signage/official style (AN tAONTAS, NA hÉIREANN). Base letters must be
-    # unchanged; only the inserted/prefixed material may vary in case.
+    # ALL-CAPS text shows up two ways: fully uppercased (IDT has BHFUIL,
+    # MBRIATHAR) and the signage style with a lowercase prefix (AN tAONTAS,
+    # NA hÉIREANN). Either way the base letters must survive untouched —
+    # only the inserted material gets to vary in case.
     if m.lower() == surface.lower():
         if tag == "Len":
             return surface[0] == base[0] and surface[2:] == base[1:]
@@ -127,21 +127,21 @@ def inverse_ok(tag: str, base: str, surface: str) -> bool:
 
 
 def demutate(w: str):
-    """Return [(tag, base), ...] for every mutation that could have produced w.
+    """[(tag, base), ...] for every mutation that could have produced w.
 
-    Over-generates by design (no lexicon filtering here). The identity
-    analysis ('none', w) is NOT included; callers add it (see analyze()).
-    Every candidate satisfies inverse_ok(tag, base, w).
+    Over-generates on purpose — there's no lexicon here to filter with.
+    The identity reading ('none', w) is not included; analyze() adds it.
+    Every candidate returned passes inverse_ok(tag, base, w).
     """
     out = _demutate_core(w)
-    # ALL-CAPS track: match against the lowercased word, keep original caps
-    # in the recovered base (BHFUIL -> FUIL, NDÉILEÁLFAIDH -> DÉILEÁLFAIDH)
+    # ALL-CAPS: run the core pass on the lowercased word, then restore the
+    # original caps in the base (BHFUIL -> FUIL)
     if len(w) > 2 and w.isupper():
         for tag, base_l in _demutate_core(w.lower()):
             cand = (tag, base_l.upper())
             if cand not in out:
                 out.append(cand)
-    # hyphen-before-capital / hyphenated-h variants
+    # the hyphen-before-capital and hyphenated-h variants
     if len(w) > 2 and w[1] == "-" and _is_vowel(w[2]):
         for pre, tag in (("n", "Ecl"), ("h", "HPref"), ("t", "TPref")):
             if w[0] == pre and (w[2].isupper() or pre == "h"):
@@ -158,30 +158,28 @@ def _demutate_core(w: str):
     n = len(w)
     if n >= 2:
         c0, l0, c1 = w[0], w[0].lower(), w[1]
-        # --- Len: X + 'h' (the inserted h is always lowercase)
+        # Len looks like X + 'h', and the inserted h is always lowercase
         if c1 == "h":
             if l0 in LENITABLE and l0 != "s":
                 out.append(("Len", c0 + w[2:]))
             # s-lenition needs a legal follower after the h
             if l0 == "s" and n >= 3 and w[2].lower() in S_FOLLOWERS:
                 out.append(("Len", c0 + w[2:]))
-        # --- Ecl: consonant pairs (prefix always lowercase, base case kept)
+        # eclipsed consonants: lowercase prefix, base keeps its case
         if w[:2].lower() == "bh" and n >= 3 and w[2].lower() == "f" and w[0] == "b":
             out.append(("Ecl", w[2:]))                      # bhf + ear -> fear
         else:
             for base_c, pre in ECLIPSIS_PREFIX.items():
                 if base_c != "f" and c0 == pre and c1.lower() == base_c:
                     out.append(("Ecl", w[1:]))
-        # --- Ecl: vowels
+        # eclipsed vowels
         if c0 == "n":
             if c1 == "-" and n >= 3 and _is_vowel(w[2]) and w[2].islower():
                 out.append(("Ecl", w[2:]))                  # n-éan -> éan
             elif _is_vowel(c1) and c1.isupper():
                 out.append(("Ecl", w[1:]))                  # nÉan -> Éan
-        # --- HPref
         if c0 == "h" and _is_vowel(c1):
             out.append(("HPref", w[1:]))
-        # --- TPref
         if c0 == "t":
             if c1 == "-" and n >= 3 and _is_vowel(w[2]) and w[2].islower():
                 out.append(("TPref", w[2:]))                # t-ainm -> ainm
@@ -197,11 +195,12 @@ def analyze(w: str):
     return [("none", w)] + demutate(w)
 
 
-# ---- reference FST engine ---------------------------------------------------
-# Small nondeterministic transducer with character-class arcs, built from the
-# same tables. Semantics: priority union (Mutate .P. Id) — if no accepting
-# path, the word is returned unchanged. Exists to pin down FST behavior for
-# the Scalpel port; parity with the direct functions is enforced in tests.
+# The reference FST: a small nondeterministic transducer with
+# character-class arcs, built from the same tables as everything else.
+# Semantics are priority union (Mutate .P. Id) — no accepting path means
+# the word comes back unchanged. It exists so the Scalpel port has an
+# exact behavior to match; the tests enforce parity with the functions
+# above.
 
 _ANY = object()
 _COPY = "COPY"
@@ -215,7 +214,7 @@ class FST:
         self.arcs.setdefault(state, []).append((charset, emit, nxt))
 
     def apply(self, w: str):
-        """Return transduced string, or None if no accepting path (caller
+        """Transduced string, or None when nothing accepts (the caller
         falls back to identity)."""
 
         def step(state, i, acc):
@@ -262,7 +261,7 @@ def fst_mutate(tag: str, w: str) -> str:
     return w if out is None else out
 
 
-# ---- foma-style replace-rule emission (Scalpel porting contract) -----------
+# foma-style replace-rule emission, for the Scalpel port
 
 def foma_grammar() -> str:
     V = " | ".join(VOWELS) + " | " + " | ".join(VOWELS.upper())

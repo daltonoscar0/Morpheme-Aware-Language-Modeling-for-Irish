@@ -1,5 +1,5 @@
-"""Grammar-rule tests on attested citation forms (standard grammar), plus
-FST-engine parity and demutation round-trip invariants. stdlib unittest."""
+"""Grammar-rule tests on citation forms, plus FST parity and the
+demutation round-trip invariants. Plain stdlib unittest."""
 import os
 import sys
 import unittest
@@ -73,8 +73,8 @@ class TestAnalysis(unittest.TestCase):
                               f"demutate({surface}) missing ({tag},{base})")
 
     def test_genuine_h_word_keeps_identity(self):
-        # 'hata' (hat) is a real h-initial word; analyzer must keep the
-        # unmutated reading alongside the HPref candidate for 'ata'.
+        # 'hata' (hat) genuinely starts with h — the unmutated reading has
+        # to survive alongside the HPref-of-'ata' candidate
         cands = analyze("hata")
         self.assertIn(("none", "hata"), cands)
         self.assertIn(("HPref", "ata"), cands)
@@ -86,7 +86,7 @@ class TestAnalysis(unittest.TestCase):
                 self.assertEqual(MUTATE[tag](base), w)
 
     def test_no_false_ts_before_blocked_cluster(self):
-        # 'tsc...' is not a valid t-prefix shape; must not analyze as TPref
+        # tsc- isn't a possible t-prefix shape, so no TPref reading here
         self.assertNotIn("TPref", [t for t, _ in demutate("tscoil")])
 
 

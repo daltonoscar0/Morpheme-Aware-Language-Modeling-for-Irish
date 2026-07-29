@@ -1,13 +1,12 @@
-"""Mutation-layer coverage on UD Irish-IDT -> RESULTS.md.
+"""Mutation-layer coverage on UD Irish-IDT, appended to RESULTS.md.
 
-Reports, over all three splits:
-  1. Round-trip accuracy on mutation-tagged tokens, by tag and by POS.
-  2. Ambiguity load: mean demutation candidates per token (all tokens), and
-     the share of untagged tokens that nonetheless receive >=1 mutation
-     candidate (spurious-candidate rate — the price of no-lexicon
-     over-generation, to be paid down by the lexicon layer later).
-Note: this is MUTATION-layer coverage only; full analyzer coverage arrives
-with declension/conjugation later in Phase 1.
+Two numbers, over all three splits: round-trip accuracy on the
+mutation-tagged tokens (by tag and by POS), and the ambiguity load —
+mean demutation candidates per token, plus how many untagged tokens still
+pick up a candidate. That spurious-candidate rate is the price of running
+without a lexicon; the lexicon layer pays it down later. Mutation layer
+only for now — full analyzer coverage has to wait for declension and
+conjugation.
 """
 import os
 import sys

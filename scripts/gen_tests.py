@@ -1,11 +1,11 @@
 """Mine UD Irish-IDT for attested mutation test cases.
 
-Output: tests/attested_mutations.tsv  (surface, lemma, upos, tag, split)
-  - Len/Ecl/HPref rows come straight from the Form= feat.
-  - TPref rows are pattern-mined (IDT leaves t-prefix unmarked): surface
-    matches t-V / t+CapV / t+s+SF and lemma starts with the base's initial.
-Every mutated IDT token becomes a test row; nothing is filtered by whether
-we expect to pass it. Run tests/test_attested.py to evaluate.
+Writes tests/attested_mutations.tsv (surface, lemma, upos, tag, split).
+Len/Ecl/HPref rows come straight off the Form= feature. IDT doesn't mark
+the t-prefix, so those rows are pattern-mined instead: the surface has to
+look like t-V, t+CapV, or t+s+follower. Every mutated token in the
+treebank becomes a row — nothing gets filtered out just because we expect
+to fail it. tests/test_attested.py does the actual evaluation.
 """
 import os
 import sys

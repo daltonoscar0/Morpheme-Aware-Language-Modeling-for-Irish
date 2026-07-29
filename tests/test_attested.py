@@ -1,15 +1,11 @@
-"""Evaluate the analyzer on every attested mutated token mined from IDT.
+"""Run the analyzer over every attested mutated token mined from IDT.
 
-Pass criterion per row (surface, lemma, upos, tag):
-  demutate(surface) contains (tag, base) such that
-    base's initial grapheme == lemma's initial (case-insensitive)  AND
-    MUTATE[tag](base) == surface  (exact round trip; guaranteed by demutate's
-    internal invariant, re-checked here anyway).
-
-Failures are written to tests/failures_attested.tsv for triage — the test
-asserts only that the pass rate clears a floor (99%), because a treebank
-contains annotation errors and genuinely judgment-needing rows; those are
-triaged into QUESTIONS.md, not silently absorbed.
+A row passes when demutate(surface) offers a candidate with the right tag
+that round-trips exactly back to the surface. Failures land in
+tests/failures_attested.tsv for triage; the assertion itself only demands
+a 99% floor, since any treebank has annotation errors and the occasional
+row that needs actual judgment — those go into QUESTIONS.md instead of
+being quietly absorbed here.
 """
 import os
 import sys
@@ -24,13 +20,12 @@ FAIL = os.path.join(HERE, "failures_attested.tsv")
 
 
 def row_passes(surface, lemma, tag):
-    """Pass = a tag-matching, exactly-inverting candidate exists.
+    """A tag-matching candidate exists that inverts exactly.
 
-    We deliberately do NOT require base-initial == lemma-initial: suppletive
-    paradigms (bhfuil/bí, chuaigh/téigh, fhearr/maith, mhná/bean) break that
-    linkage, and tying surface to lemma is the morphology layer's job, not
-    the mutation layer's. Lemma-initial mismatches are still counted and
-    reported as a suppletion/annotation diagnostic.
+    Note we don't require the base to share the lemma's initial — suppletion
+    (bhfuil/bí, chuaigh/téigh, mhná/bean) breaks that link, and connecting
+    surface to lemma is the morphology layer's job anyway. The mismatches
+    do still get counted below, as a suppletion/annotation diagnostic.
     """
     for t, base in demutate(surface):
         if t == tag and inverse_ok(t, base, surface):
