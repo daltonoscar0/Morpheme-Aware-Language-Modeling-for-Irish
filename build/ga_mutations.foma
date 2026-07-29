@@ -1,0 +1,11 @@
+# Irish initial mutations as start-anchored replace rules.
+# Case tracks omitted for brevity: lowercase shown; prefixes/inserted
+# h are always lowercase, base letter keeps its case; the vowel rules
+# with hyphen apply to lowercase bases, hyphen-less to capitals.
+define V [ a | e | i | o | u | á | é | í | ó | ú | A | E | I | O | U | Á | É | Í | Ó | Ú ];
+define SF [ a | e | i | o | u | á | é | í | ó | ú | l | n | r | A | E | I | O | U | Á | É | Í | Ó | Ú | L | N | R ];
+define Len  [ b -> b h , c -> c h , d -> d h , f -> f h , g -> g h , m -> m h , p -> p h , t -> t h || .#. _ ] .o. [ s -> s h || .#. _ SF ];
+define Ecl  [ b -> m b , c -> g c , d -> n d , f -> b h f , g -> n g , p -> b p , t -> d t || .#. _ ] .o. [ [..] -> n "-" || .#. _ V ];   # capitals: [..] -> n, no hyphen
+define HPref [ [..] -> h || .#. _ V ];
+define TPref [ [..] -> t "-" || .#. _ V ] .o. [ [..] -> t || .#. _ s SF ];      # capitals: t, no hyphen
+# Analyzer side: [Len | Ecl | HPref | TPref].i .P. Id
