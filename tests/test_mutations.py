@@ -73,7 +73,7 @@ class TestAnalysis(unittest.TestCase):
                               f"demutate({surface}) missing ({tag},{base})")
 
     def test_genuine_h_word_keeps_identity(self):
-        # 'hata' (hat) genuinely starts with h — the unmutated reading has
+        # 'hata' (hat) genuinely starts with h, the unmutated reading has
         # to survive alongside the HPref-of-'ata' candidate
         cands = analyze("hata")
         self.assertIn(("none", "hata"), cands)

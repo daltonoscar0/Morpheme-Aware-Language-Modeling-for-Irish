@@ -34,7 +34,7 @@ SIMPLE = {
     "aon": "Len", "dhá": "Len", "trí_NUM": "Len", "ceithre": "Len",
     "cúig": "Len", "sé_NUM": "Len",
     "seacht": "Ecl", "ocht": "Ecl", "naoi": "Ecl", "deich": "Ecl",
-    # h-prefixers — only do anything before a vowel, of course
+    # h-prefixers, only do anything before a vowel, of course
     "go_ADV": "HPref", "le": "HPref", "chomh": "HPref", "ná": "HPref",
 }
 
@@ -66,7 +66,7 @@ def expected_mutation(lemma, upos, feats, next_form=None):
     if lemma == "na" and upos == "DET":
         return "?"   # gen pl eclipses; fem gen sg / nom pl h-prefix vowels
     if upos == "PART" and lemma == "a":
-        return "?"   # direct rel lenites, indirect eclipses — needs PartType
+        return "?"   # direct rel lenites, indirect eclipses, needs PartType
     if upos == "NUM":
         return SIMPLE.get(lemma + "_NUM", SIMPLE.get(lemma))
     if upos == "PART":

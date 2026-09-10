@@ -17,7 +17,7 @@ from Beesley & Karttunen ch. 3. Tested against attested forms mined from
 UD Irish-IDT (scripts/gen_tests.py) plus hand-picked citation forms.
 """
 
-VOWELS = "aeiouáéíóú"          # lowercase — .lower() before membership tests
+VOWELS = "aeiouáéíóú"          # lowercase.lower() before membership tests
 S_FOLLOWERS = VOWELS + "lnr"   # s only mutates before these (so sc/sm/sp/st are safe)
 
 LENITABLE = set("bcdfgmpt")    # s too, but only before S_FOLLOWERS
@@ -117,7 +117,7 @@ def inverse_ok(tag: str, base: str, surface: str) -> bool:
         return True
     # ALL-CAPS text shows up two ways: fully uppercased (IDT has BHFUIL,
     # MBRIATHAR) and the signage style with a lowercase prefix (AN tAONTAS,
-    # NA hÉIREANN). Either way the base letters must survive untouched —
+    # NA hÉIREANN). Either way the base letters must survive untouched -
     # only the inserted material gets to vary in case.
     if m.lower() == surface.lower():
         if tag == "Len":
@@ -197,7 +197,7 @@ def analyze(w: str):
 
 # The reference FST: a small nondeterministic transducer with
 # character-class arcs, built from the same tables as everything else.
-# Semantics are priority union (Mutate .P. Id) — no accepting path means
+# Semantics are priority union (Mutate .P. Id), no accepting path means
 # the word comes back unchanged. It exists so the Scalpel port has an
 # exact behavior to match; the tests enforce parity with the functions
 # above.
