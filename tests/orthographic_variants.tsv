@@ -15,6 +15,11 @@
 # Lemma is the base the mutation applies to, not a dictionary lemma, because
 # these are spelling cases rather than corpus tokens.
 #
+# The last five 'edge' rows before the negatives came out of
+# scripts/fuzz_parity.py rather than the matrix: a one-letter ALL-CAPS stem
+# behind a hyphenated marker (N-A), and a mixed-case bHf, which the two
+# implementations used to disagree about.
+#
 # surface	lemma	upos	tag	split
 n-APP	APP	PROPN	Ecl	edge
 n-EOS	EOS	PROPN	Ecl	edge
@@ -46,6 +51,11 @@ tAONTAS	AONTAS	PROPN	TPref	edge
 BHEAN	BEAN	NOUN	Len	edge
 bhean	bean	NOUN	Len	edge
 shláinte	sláinte	NOUN	Len	edge
+N-A	A	X	Ecl	edge
+T-A	A	X	TPref	edge
+N-Ú	Ú	X	Ecl	edge
+bHfill	fill	X	Ecl	edge
+bHFBEAN	FBEAN	X	Ecl	edge
 H-APP	none	PROPN	none	negative
 H-ÉAN	none	NOUN	none	negative
 shciatháin	none	NOUN	none	negative

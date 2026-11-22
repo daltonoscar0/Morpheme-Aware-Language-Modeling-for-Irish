@@ -16,6 +16,8 @@ The rules themselves are standard Caighdeán; the replace-rule shape comes
 from Beesley & Karttunen ch. 3. Tested against attested forms mined from
 UD Irish-IDT (scripts/gen_tests.py) plus hand-picked citation forms.
 """
+import sys as _sys
+
 
 VOWELS = "aeiouáéíóú"          # lowercase.lower() before membership tests
 S_FOLLOWERS = VOWELS + "lnr"   # s only mutates before these (so sc/sm/sp/st are safe)
@@ -139,8 +141,12 @@ def realisations(tag: str, base: str) -> set:
         return out
 
     markers = {marker}
-    if len(base) > 1 and base.isupper():
-        markers.add(marker.upper())     # BHFUIL, NAPP
+    if base.isupper():
+        # BHFUIL, NAPP. Not gated on length: the ALL-CAPS analysis track
+        # fires on len(surface) > 2, which a one-letter base still satisfies
+        # once a marker and a hyphen are in front of it ('N-A'), so gating
+        # this on len(base) left those readings unverifiable. Found by fuzzing.
+        markers.add(marker.upper())
     seps = {""}
     if marker.lower() in HYPHENABLE and base and _is_vowel(base[0]):
         seps.add("-")
@@ -171,31 +177,53 @@ def inverse_ok(tag: str, base: str, surface: str) -> bool:
     return False
 
 
-def demutate(w: str):
-    """[(tag, base), ...] for every mutation that could have produced w.
+def demutate_candidates(w: str):
+    """Every candidate the analysis tracks produce, before verification.
 
-    Over-generates on purpose — there's no lexicon here to filter with.
-    The identity reading ('none', w) is not included; analyze() adds it.
-    Every candidate returned passes inverse_ok(tag, base, w).
+    Exposed so a caller can tell a reading that was never proposed from one
+    that was proposed and then dropped by the inverse check. The fuzz harness
+    compares this against demutate() to assert the drop count is zero.
     """
     out = _demutate_core(w)
-    # ALL-CAPS: run the core pass on the lowercased word, then restore the
-    # original caps in the base (BHFUIL -> FUIL)
     if len(w) > 2 and w.isupper():
         for tag, base_l in _demutate_core(w.lower()):
             cand = (tag, base_l.upper())
             if cand not in out:
                 out.append(cand)
-    # the hyphen-before-capital and hyphenated-h variants
     if len(w) > 2 and w[1] == "-" and _is_vowel(w[2]):
         for pre, tag in (("n", "Ecl"), ("h", "HPref"), ("t", "TPref")):
             if w[0] == pre and (w[2].isupper() or pre == "h"):
                 cand = (tag, w[2:])
                 if cand not in out:
                     out.append(cand)
-    for tag, base in out:
-        assert inverse_ok(tag, base, w), (tag, base, w)
     return out
+
+
+def demutate(w: str, strict: bool = False):
+    """[(tag, base), ...] for every mutation that could have produced w.
+
+    Over-generates on purpose — there's no lexicon here to filter with.
+    The identity reading ('none', w) is not included; analyze() adds it.
+    Every candidate returned passes inverse_ok(tag, base, w).
+
+    A candidate that fails its own inverse check is *dropped* and reported on
+    stderr, not raised. This runs over user text: a tokenizer about to go
+    across a parallel corpus must not die on one word, and silently handing
+    back a reading that cannot regenerate its surface would be worse. With
+    ``strict`` the mismatch raises instead, which is what the test runners
+    want: there the right behaviour is to be loud.
+    """
+    out = demutate_candidates(w)
+    kept = []
+    for tag, base in out:
+        if inverse_ok(tag, base, w):
+            kept.append((tag, base))
+            continue
+        if strict:
+            raise AssertionError((tag, base, w))
+        print(f"mutations: dropped unverifiable reading {tag}:{base} "
+              f"for {w!r}", file=_sys.stderr)
+    return kept
 
 
 def _demutate_core(w: str):

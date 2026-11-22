@@ -27,14 +27,14 @@ def row_passes(surface, lemma, tag):
     surface to lemma is the morphology layer's job anyway. The mismatches
     do still get counted below, as a suppletion/annotation diagnostic.
     """
-    for t, base in demutate(surface):
+    for t, base in demutate(surface, strict=True):
         if t == tag and inverse_ok(t, base, surface):
             return True
     return False
 
 
 def lemma_initial_matches(surface, lemma, tag):
-    for t, base in demutate(surface):
+    for t, base in demutate(surface, strict=True):
         if t == tag and base[:1].lower() == lemma[:1].lower():
             return True
     return False
@@ -91,13 +91,14 @@ class TestOrthographicVariants(unittest.TestCase):
                 if split == "negative":
                     neg += 1
                     # demutate() must not raise and must offer nothing.
-                    if demutate(surface):
-                        neg_fail.append((surface, demutate(surface)))
+                    if demutate(surface, strict=True):
+                        neg_fail.append(
+                            (surface, demutate(surface, strict=True)))
                 else:
                     pos += 1
-                    if (tag, lemma) not in demutate(surface):
+                    if (tag, lemma) not in demutate(surface, strict=True):
                         pos_fail.append((surface, tag, lemma,
-                                         demutate(surface)))
+                                         demutate(surface, strict=True)))
                     elif not inverse_ok(tag, lemma, surface):
                         pos_fail.append((surface, tag, lemma, "inverse_ok"))
         print(f"\northographic variants: {pos - len(pos_fail)}/{pos} positive, "

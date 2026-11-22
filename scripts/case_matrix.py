@@ -99,7 +99,7 @@ def cells():
 def py_probe(c):
     """Python: readings, their inverse_ok, generation, and whether it raises."""
     try:
-        readings = M.demutate(c["surface"])
+        readings = M.demutate(c["surface"], strict=True)
         abort = False
     except AssertionError:
         abort = True
