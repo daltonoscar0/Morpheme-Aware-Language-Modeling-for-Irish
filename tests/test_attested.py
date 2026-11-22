@@ -67,5 +67,45 @@ class TestAttested(unittest.TestCase):
                                 f"{len(fails)} failures; see {FAIL}")
 
 
+VARIANTS = os.path.join(HERE, "orthographic_variants.tsv")
+
+
+class TestOrthographicVariants(unittest.TestCase):
+    """The spelling edge cases, kept apart from the treebank rows.
+
+    These are constructed from docs/mutation_case_matrix.md rather than mined,
+    so they are held to 100% instead of the attested file's 99% floor: a
+    failure here is a bug, not an annotation judgement. The split column
+    carries the expectation ('edge' must analyse, 'negative' must not).
+    """
+
+    def test_orthographic_variants(self):
+        if not os.path.exists(VARIANTS):
+            self.skipTest("tests/orthographic_variants.tsv missing")
+        pos, neg, pos_fail, neg_fail = 0, 0, [], []
+        with open(VARIANTS, encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("#") or not line.strip():
+                    continue
+                surface, lemma, upos, tag, split = line.rstrip("\n").split("\t")
+                if split == "negative":
+                    neg += 1
+                    # demutate() must not raise and must offer nothing.
+                    if demutate(surface):
+                        neg_fail.append((surface, demutate(surface)))
+                else:
+                    pos += 1
+                    if (tag, lemma) not in demutate(surface):
+                        pos_fail.append((surface, tag, lemma,
+                                         demutate(surface)))
+                    elif not inverse_ok(tag, lemma, surface):
+                        pos_fail.append((surface, tag, lemma, "inverse_ok"))
+        print(f"\northographic variants: {pos - len(pos_fail)}/{pos} positive, "
+              f"{neg - len(neg_fail)}/{neg} negative")
+        self.assertEqual(pos_fail, [], f"positive cases failed: {pos_fail}")
+        self.assertEqual(neg_fail, [], f"negative cases gained a reading: "
+                                       f"{neg_fail}")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -102,26 +102,71 @@ def applies(tag: str, w: str) -> bool:
 
 # analysis: surface -> candidate bases
 
-def inverse_ok(tag: str, base: str, surface: str) -> bool:
-    """Does mutating base give surface, allowing the orthographic variants
-    we accept on the analysis side? Generation is strict Caighdeán (no
-    hyphen before capitals, no hyphenated h), but real text also has
-    n-Ealaíon for nEalaíon, and pre-standard h-aoise / h-Íde, so analysis
-    takes those too.
+PLAIN = {"Len": lenite, "Ecl": eclipse, "HPref": h_prefix,
+         "TPref": t_prefix}
+
+# The three markers that may be followed by a hyphen, and only before a
+# vowel: n-Ealaíon, t-ainm, pre-standard h-aoise.
+HYPHENABLE = ("n", "h", "t")
+
+
+def realisations(tag: str, base: str) -> set:
+    """Every surface spelling of ``mutate(tag, base)`` analysis accepts.
+
+    Generation stays strict Caighdeán; this is the wider set the *analysis*
+    side has always taken, written down so a reading can be checked against
+    it instead of against a single string. Enumerating it is what lets
+    'n-APP' be verified: the canonical spelling is 'NAPP', because an
+    all-caps stem uppercases the inserted marker, and no amount of pairwise
+    comparison gets from one to the other in a single step.
+
+    Deliberately no wider than analysis: the uppercase marker is offered
+    only when the stem is ALL-CAPS, and the hyphen only for n/h/t before a
+    vowel. ``inverse_ok`` is also the pass criterion for the attested file,
+    so loosening it further would quietly change that count.
     """
-    m = MUTATE[tag](base)
-    if m == surface:
+    out = {MUTATE[tag](base)}
+    if tag == "Len":
+        # Lenition has no hyphen variant, and the all-caps case is already
+        # exact: _caps_aware uppercases the inserted h with everything else.
+        return out
+
+    plain = PLAIN[tag](base)
+    if plain == base or not plain.endswith(base):
+        return out                      # the mutation does not apply here
+    marker = plain[:len(plain) - len(base)].rstrip("-")
+    if not marker:
+        return out
+
+    markers = {marker}
+    if len(base) > 1 and base.isupper():
+        markers.add(marker.upper())     # BHFUIL, NAPP
+    seps = {""}
+    if marker.lower() in HYPHENABLE and base and _is_vowel(base[0]):
+        seps.add("-")
+    out |= {mk + sep + base for mk in markers for sep in seps}
+    return out
+
+
+def inverse_ok(tag: str, base: str, surface: str) -> bool:
+    """Could mutating base have produced surface?
+
+    True when surface is one of the orthographic realisations generation is
+    allowed to have for this base. Generation itself is strict Caighdeán (no
+    hyphen before capitals, no hyphenated h), but real text also has
+    n-Ealaíon for nEalaíon, pre-standard h-aoise, fully uppercased BHFUIL
+    and the signage style AN tAONTAS, so analysis takes those too and they
+    have to verify.
+    """
+    if surface in realisations(tag, base):
         return True
-    if surface[1:2] == "-" and surface[0] in "nht" \
-            and m == surface[0] + surface[2:]:
-        return True
-    # ALL-CAPS text shows up two ways: fully uppercased (IDT has BHFUIL,
-    # MBRIATHAR) and the signage style with a lowercase prefix (AN tAONTAS,
-    # NA hÉIREANN). Either way the base letters must survive untouched -
-    # only the inserted material gets to vary in case.
-    if m.lower() == surface.lower():
+    # Case-flexible fallback for the inserted material, kept from the
+    # original: the base letters must survive untouched and only what the
+    # mutation added may vary.
+    if MUTATE[tag](base).lower() == surface.lower():
         if tag == "Len":
-            return surface[0] == base[0] and surface[2:] == base[1:]
+            return (bool(base) and len(surface) >= 2
+                    and surface[0] == base[0] and surface[2:] == base[1:])
         return surface.endswith(base)
     return False
 

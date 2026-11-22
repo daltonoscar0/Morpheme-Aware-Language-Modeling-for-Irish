@@ -1,0 +1,58 @@
+# Orthographic edge cases for the mutation layer. NOT treebank rows.
+#
+# attested_mutations.tsv is mined from UD Irish-IDT and its row count (17,201)
+# is asserted by both test runners, so it is left exactly as it is. These rows
+# are constructed from the case matrix in docs/mutation_case_matrix.md, plus
+# the four forms from data/GA that used to abort the analyser
+# (n-APP, n-EOS, n-IOTA, t-AMHAIN).
+#
+# Same five columns as the attested file: surface, lemma, upos, tag, split.
+# The split column carries the expectation instead of a treebank split:
+#
+#   edge      analysis must return (tag, lemma) and it must pass inverse_ok
+#   negative  analysis must return no mutation reading at all; tag is 'none'
+#
+# Lemma is the base the mutation applies to, not a dictionary lemma, because
+# these are spelling cases rather than corpus tokens.
+#
+# surface	lemma	upos	tag	split
+n-APP	APP	PROPN	Ecl	edge
+n-EOS	EOS	PROPN	Ecl	edge
+n-IOTA	IOTA	PROPN	Ecl	edge
+t-AMHÁIN	AMHÁIN	ADV	TPref	edge
+N-APP	APP	PROPN	Ecl	edge
+N-ÉAN	ÉAN	NOUN	Ecl	edge
+n-ÉAN	ÉAN	NOUN	Ecl	edge
+t-APP	APP	PROPN	TPref	edge
+T-APP	APP	PROPN	TPref	edge
+t-ÉAN	ÉAN	NOUN	TPref	edge
+T-ÉAN	ÉAN	NOUN	TPref	edge
+h-APP	APP	PROPN	HPref	edge
+h-ÉAN	ÉAN	NOUN	HPref	edge
+n-app	app	NOUN	Ecl	edge
+t-app	app	NOUN	TPref	edge
+h-app	app	NOUN	HPref	edge
+n-Ealaíon	Ealaíon	NOUN	Ecl	edge
+n-éan	éan	NOUN	Ecl	edge
+nÉan	Éan	NOUN	Ecl	edge
+t-ainm	ainm	NOUN	TPref	edge
+tAthair	Athair	NOUN	TPref	edge
+tsúil	súil	NOUN	TPref	edge
+h-aoise	aoise	NOUN	HPref	edge
+hÉireann	Éireann	PROPN	HPref	edge
+BHFUIL	FUIL	VERB	Ecl	edge
+MBRIATHAR	BRIATHAR	NOUN	Ecl	edge
+tAONTAS	AONTAS	PROPN	TPref	edge
+BHEAN	BEAN	NOUN	Len	edge
+bhean	bean	NOUN	Len	edge
+shláinte	sláinte	NOUN	Len	edge
+H-APP	none	PROPN	none	negative
+H-ÉAN	none	NOUN	none	negative
+shciatháin	none	NOUN	none	negative
+Shmutánach	none	ADJ	none	negative
+x-APP	none	X	none	negative
+n-	none	X	none	negative
+t-	none	X	none	negative
+h-	none	X	none	negative
+-APP	none	X	none	negative
+n--APP	none	X	none	negative
