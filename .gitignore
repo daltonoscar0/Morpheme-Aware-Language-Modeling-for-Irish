@@ -6,3 +6,14 @@ AGENTS.md
 .mcp.json
 tasks/lessons.md
 tasks/todo.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# macOS
+.DS_Store
